@@ -1,3 +1,5 @@
 .config.json
+.cache
 .env
 test.mp3
+musicmanager

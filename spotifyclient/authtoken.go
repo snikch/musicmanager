@@ -34,7 +34,7 @@ func init() {
 		spotify.ScopePlaylistModifyPrivate,
 	}
 	authenticator = spotify.NewAuthenticator(redirectURL, scopes...)
-	authenticator.SetAuthInfo(config.String("SPOTIFY_CLIENT_ID", ""), config.String("SPOTIFY_CLIENT_SECRET"))
+	authenticator.SetAuthInfo(config.String("SPOTIFY_CLIENT_ID", ""), config.PrivateString("SPOTIFY_CLIENT_SECRET"))
 }
 
 type contextKey int
