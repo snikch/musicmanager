@@ -3,6 +3,7 @@ package spotify
 import (
 	"context"
 
+	"github.com/snikch/api/fail"
 	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/configuration"
 	"github.com/snikch/musicmanager/spotifyclient"
@@ -19,20 +20,20 @@ func CreateMissingPlaylist(ctx context.Context, graph TrackGraph, tracks TrackLo
 	playlistID := spotify.ID(conf.Spotify.OutputPlaylist.ID)
 	if playlistID == "" {
 		playlist, err := client.CreatePlaylistForUser(graph.UserID, conf.Spotify.OutputPlaylist.Name, false)
+		if err != nil {
+			return fail.Trace(err)
+		}
 		log.
 			WithField("user", graph.UserID).
 			WithField("name", conf.Spotify.OutputPlaylist.Name).
 			Info("Created new spotify missing playlist")
-		if err != nil {
-			return err
-		}
 		playlistID = playlist.ID
 		conf.Spotify.OutputPlaylist.ID = string(playlistID)
 	} else {
 		log.WithField("id", playlistID).Info("Clearing existing spotify missing playlist")
 		err := client.ReplacePlaylistTracks(graph.UserID, playlistID)
 		if err != nil {
-			log.WithError(err).Fatal()
+			log.WithError(fail.Trace(err)).Fatal()
 		}
 	}
 	batch := []spotify.ID{}
@@ -57,7 +58,7 @@ func CreateMissingPlaylist(ctx context.Context, graph TrackGraph, tracks TrackLo
 			log.Debug("Saving playlist")
 			_, err := client.AddTracksToPlaylist(graph.UserID, playlistID, batch...)
 			if err != nil {
-				return err
+				return fail.Trace(err)
 			}
 			batch = []spotify.ID{}
 			count = 0
@@ -66,7 +67,7 @@ func CreateMissingPlaylist(ctx context.Context, graph TrackGraph, tracks TrackLo
 	if len(batch) > 0 {
 		_, err := client.AddTracksToPlaylist(graph.UserID, playlistID, batch...)
 		if err != nil {
-			return err
+			return fail.Trace(err)
 		}
 	}
 	log.WithField("id", playlistID).

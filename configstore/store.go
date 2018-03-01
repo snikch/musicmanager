@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/snikch/api/config"
+	"github.com/snikch/api/log"
 )
 
 var loc = config.String("CONFIGURATION_FILE", ".config.json")
@@ -16,6 +17,7 @@ func Load(data interface{}) error {
 	if err != nil {
 		// If the file doesn't exist, this isn't considered an error.
 		if os.IsNotExist(err) {
+			log.WithField("loc", loc).Debug("No config file found")
 			return nil
 		}
 		return err

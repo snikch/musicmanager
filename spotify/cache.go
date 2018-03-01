@@ -58,7 +58,7 @@ func loadGraphFromCache(ctx context.Context, graph *TrackGraph) (bool, error) {
 	err = json.Unmarshal(contents, &graph)
 	if err != nil {
 		log.WithError(err).WithField("file", playlistCacheLoc).Error("Failed to unmarshal cached playlist")
-		return false, err
+		return false, fail.Trace(err)
 	}
 	return true, nil
 }
@@ -66,12 +66,12 @@ func loadGraphFromCache(ctx context.Context, graph *TrackGraph) (bool, error) {
 func writeGraphToCache(ctx context.Context, graph TrackGraph) error {
 	cache, err := json.MarshalIndent(graph, "", "  ")
 	if err != nil {
-		return err
+		return fail.Trace(err)
 	}
 	err = ioutil.WriteFile(playlistCacheLoc, cache, 0644)
 	if err != nil {
 		log.WithError(err).WithField("file", playlistCacheLoc).Error("Failed to write playlist cache")
-		return err
+		return fail.Trace(err)
 	}
 	return nil
 }
@@ -122,7 +122,7 @@ func retrieveGraph(ctx context.Context) (TrackGraph, error) {
 				userID := playlist.Owner.ID
 				fullList, err = client.GetPlaylistTracksOpt(playlist.Owner.ID, playlist.ID, opts, "")
 				if err != nil {
-					log.WithError(err).Fatal()
+					log.WithError(fail.Trace(err)).Fatal()
 				}
 				if len(fullList.Tracks) == 0 {
 					break

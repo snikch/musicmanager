@@ -18,7 +18,9 @@ type Configuration struct {
 		}
 	}
 	MusicFiles struct {
-		Dirs []string
+		TagReplacements map[string]string
+		TagRemovals     []string
+		Dirs            []string
 	}
 }
 

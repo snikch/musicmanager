@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/snikch/musicmanager/configuration"
+
 	"github.com/sirupsen/logrus"
 	"github.com/snikch/api/fail"
 	"github.com/snikch/api/log"
@@ -21,7 +23,7 @@ func updateFileWithPlaylistTags(ctx context.Context, file types.File, track spot
 	if err != nil {
 		return err
 	}
-	didUpdateGenre := updateGenre(ctx, l, file, track, playlists)
+	didUpdateGenre := updateGenre(ctx, l, file, playlists)
 	if !didUpdateBasic && !didUpdateGenre {
 		return nil
 	}
@@ -45,43 +47,46 @@ func updateBasics(ctx context.Context, l *logrus.Entry, file types.File, track s
 	return didUpdate, nil
 }
 
-func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, track spotify.FullTrack, playlists []spotify.SimplePlaylist) bool {
+func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlists []spotify.SimplePlaylist) bool {
 	targetTags := map[string]bool{}
-	isNoVocal := false
-	forceUpdate := false
+	tagRemovals := map[string]bool{}
+	conf := configuration.ContextConfiguration(ctx)
+	removalLookup := map[string]bool{}
+	for _, tag := range conf.MusicFiles.TagRemovals {
+		removalLookup[tag] = true
+	}
 	for _, playlist := range playlists {
-		if playlist.Name == "House: No Vocal" {
-			isNoVocal = true
-			continue
+		name := playlist.Name
+		for match, replacement := range conf.MusicFiles.TagReplacements {
+			name = strings.Replace(name, match, replacement, -1)
 		}
-		for _, genre := range playlistNameToGenres(ctx, playlist.Name) {
-			if genre == "" {
-				continue
+		for _, genre := range playlistNameToGenres(ctx, name) {
+			if _, ok := removalLookup[genre]; !ok {
+				targetTags[genre] = true
 			}
-			targetTags[genre] = true
 		}
 	}
 	existingTags := map[string]bool{}
 	for _, genre := range strings.Split(file.Genre(), " ") {
-		if genre == "" || genre == "no" {
+		if genre == "" {
 			continue
 		}
-		existingTags[genre] = true
-	}
-	if isNoVocal {
-		if existingTags["vocal"] {
-			delete(existingTags, "vocal")
-			forceUpdate = true
+		if _, ok := removalLookup[genre]; ok {
+			tagRemovals[genre] = true
+		} else {
+			existingTags[genre] = true
 		}
 	}
-	l = l.WithField("novocal", isNoVocal).
+	removingTags := make([]string, 0, len(tagRemovals))
+	for tag := range tagRemovals {
+		removingTags = append(removingTags, tag)
+	}
+	l = l.WithField("removals", removingTags).
 		WithField("existing", existingTags).
 		WithField("target", targetTags)
 	if reflect.DeepEqual(targetTags, existingTags) {
 		l.Debug("No tag update required")
-		if !forceUpdate {
-			return false
-		}
+		return false
 	}
 	genres := []string{}
 	for genre := range existingTags {
@@ -106,10 +111,13 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, track sp
 }
 
 func playlistNameToGenres(ctx context.Context, name string) []string {
-	parts := strings.Split(name, ": ")
-	genres := make([]string, len(parts))
+	parts := strings.Split(name, " ")
+	genres := make([]string, 0, len(parts))
 	for i := range parts {
-		genres[i] = strings.ToLower(strings.Trim(parts[i], ": "))
+		part := strings.ToLower(strings.Trim(parts[i], " "))
+		if part != "" {
+			genres = append(genres, part)
+		}
 	}
 	return genres
 }
