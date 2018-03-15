@@ -33,4 +33,16 @@ Compares local files against Spotify playlists and creates a new Spotify playlis
 Tag local files with the following:
 
 * Genre: Converts playlist names to tags (e.g. House: Vocal becomes "house" and "vocal"), and adds them in the Genre ID3 tag
-* Year: Ensures the Year ID3 tag is set
+* Year: Ensures the Year ID3 tag is set (from album information in Spotify)
+
+
+## Future Commands
+
+To be written
+
+- [ ] `follow-spotify-artists` Ensure Spotify artists of local songs with 3⭐ ratings or higher are followed
+- [ ] `create-following-playlist` Creates a playlist of all songs from followed Spotify artists that were released after a given date (persisted after running to allow continuous running of the command)
+- [ ] `find-longer` Find longer versions of songs in Spotify (such as the extended mix).
+- [ ] `find-longer` Add beatport support since Spotify often only has radio edits
+- [ ] `remove-unwanted` Remove local files with a specific tag from all Spotify playlists, delete local file and remove from iTunes
+- [ ] `backpropagate-tags` Push tags from local files back to Spotify playlists

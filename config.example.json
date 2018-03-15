@@ -1,0 +1,23 @@
+{
+  "Spotify": {
+    "PlaylistRegex": "^House:.*",
+    "OutputPlaylist": {
+      "Name": "MISSING"
+    }
+  },
+  "MusicFiles": {
+    "TagReplacements": {
+      "Not House": "NotHouse",
+      "No Vocal": "",
+      "Mid": "",
+      ":": ""
+    },
+    "TagRemovals": [
+      "mid"
+    ],
+    "Dirs": [
+      "/Users/mal/Music/iTunes/iTunes Media/Music/",
+      "/Users/mal/Documents/Beatport"
+    ]
+  }
+}
