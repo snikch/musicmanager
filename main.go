@@ -7,6 +7,7 @@ import (
 
 	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/commands"
+	"github.com/snikch/musicmanager/commands/follow_artists"
 	"github.com/snikch/musicmanager/configstore"
 	"github.com/snikch/musicmanager/configuration"
 	"github.com/snikch/musicmanager/spotifyclient"
@@ -33,6 +34,8 @@ func main() {
 	}
 
 	switch os.Args[1] {
+	case "follow-artists":
+		err = follow_artists.Command(ctx)
 	case "refresh-spotify":
 		err = commands.RefreshSpotify(ctx)
 	case "tag-files":

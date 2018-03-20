@@ -89,6 +89,18 @@ func TestUpdateGenreRemovesTags(t *testing.T) {
 	tagMatch(t, song.Genre(), "p2")
 }
 
+func TestUpdateGenreRemovesTagsWithNoUpdate(t *testing.T) {
+	ctx := configuration.ContextWithConfiguration(context.Background())
+	conf := configuration.ContextConfiguration(ctx)
+	conf.MusicFiles.TagRemovals = []string{"x1"}
+	song := newMockFile("artist", "song")
+	song.SetGenre("x1 p1")
+	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+		{Name: "P1"},
+	})
+	tagMatch(t, song.Genre(), "p1")
+}
+
 func TestUpdateGenreReplacesTags(t *testing.T) {
 	ctx := configuration.ContextWithConfiguration(context.Background())
 	conf := configuration.ContextConfiguration(ctx)
@@ -111,6 +123,6 @@ func tagMatch(t *testing.T, a, b string) {
 	sort.Strings(aSlice)
 	sort.Strings(bSlice)
 	if !reflect.DeepEqual(aSlice, bSlice) {
-		t.Fatalf("Expected '%s' genre but got '%s'", a, b)
+		t.Fatalf("Expected '%s' genre but got '%s'", b, a)
 	}
 }

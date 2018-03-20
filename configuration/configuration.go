@@ -17,6 +17,13 @@ type Configuration struct {
 			Name string
 		}
 	}
+	ITunes struct {
+		Dir     string
+		Artists struct {
+			SpotifyOverrides map[string]string
+			Skip             []string
+		}
+	}
 	MusicFiles struct {
 		TagReplacements map[string]string
 		TagRemovals     []string

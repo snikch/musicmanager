@@ -84,7 +84,7 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 	l = l.WithField("removals", removingTags).
 		WithField("existing", existingTags).
 		WithField("target", targetTags)
-	if reflect.DeepEqual(targetTags, existingTags) {
+	if reflect.DeepEqual(targetTags, existingTags) && len(removingTags) == 0 {
 		l.Debug("No tag update required")
 		return false
 	}
@@ -99,13 +99,13 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 			genres = append(genres, genre)
 		}
 	}
-	if len(addedTags) == 0 {
-		l.Debug("No additional tags to add")
+	if len(addedTags) == 0 && len(removingTags) == 0 {
+		l.Debug("No tags to change")
 		return false
 	}
 	l.WithField("added", addedTags).
 		WithField("all", genres).
-		Info("Adding extra tags")
+		Info("Adjusting tags")
 	file.SetGenre(strings.Join(genres, " "))
 	return true
 }

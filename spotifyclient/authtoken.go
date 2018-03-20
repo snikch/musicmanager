@@ -32,6 +32,8 @@ func init() {
 		spotify.ScopeUserReadPrivate,
 		spotify.ScopePlaylistReadPrivate,
 		spotify.ScopePlaylistModifyPrivate,
+		spotify.ScopeUserFollowRead,
+		spotify.ScopeUserFollowModify,
 	}
 	authenticator = spotify.NewAuthenticator(redirectURL, scopes...)
 	authenticator.SetAuthInfo(config.String("SPOTIFY_CLIENT_ID", ""), config.PrivateString("SPOTIFY_CLIENT_SECRET"))
