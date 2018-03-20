@@ -1,6 +1,11 @@
 # Music Manager
 
-Manage and tag your local music files from Spotify Playlists. I find music on Spotify, put them into playlists like `House: Vocal` and `House: Funky`. I use the `create-missing-playlist` command to create a `Missing` playlist that I then download via whatever means (Beatport, Ripping, whatever). Once downloaded, I use the `tag-files` command to update my local music Mp3's with tags based on the playlists, so I end up with a Genre ID3 tag such as `house vocal funky`. From there I can make smart playlists in iTunes based on those tags, and use that in whatever software I want (Djay Pro, Serato etc.).
+Manage and tag your local music files from Spotify Playlists. I find music on Spotify, put them into playlists like
+`House: Vocal` and `House: Funky`. I use the `create-missing-playlist` command to create a `Missing` playlist that I
+then download via whatever means (Beatport, Ripping, whatever). Once downloaded, I use the `tag-files` command to update
+my local music Mp3's with tags based on the playlists, so I end up with a Genre ID3 tag such as `house vocal funky`.
+From there I can make smart playlists in iTunes based on those tags, and use that in whatever software I want (Djay Pro,
+Serato etc.).
 
 ## Install
 
@@ -26,23 +31,29 @@ Pulls down matching playlists from Spotify and stores them in a cache.
 
 ### create-missing-playlists
 
-Compares local files against Spotify playlists and creates a new Spotify playlist with all tracks that aren't present locally. You can now purchase these from Beatport or get them from whereever.
+Compares local files against Spotify playlists and creates a new Spotify playlist with all tracks that aren't present
+locally. You can now purchase these from Beatport or get them from whereever.
 
 ### tag-files
 
 Tag local files with the following:
 
-* Genre: Converts playlist names to tags (e.g. House: Vocal becomes "house" and "vocal"), and adds them in the Genre ID3 tag
+* Genre: Converts playlist names to tags (e.g. House: Vocal becomes "house" and "vocal"), and adds them in the Genre ID3
+  tag
 * Year: Ensures the Year ID3 tag is set (from album information in Spotify)
 
+### follow-artists
+
+Follows on Spotify all artists with a 3⭐ rating or higher.
 
 ## Future Commands
 
 To be written
 
-- [ ] `follow-spotify-artists` Ensure Spotify artists of local songs with 3⭐ ratings or higher are followed
-- [ ] `create-following-playlist` Creates a playlist of all songs from followed Spotify artists that were released after a given date (persisted after running to allow continuous running of the command)
-- [ ] `find-longer` Find longer versions of songs in Spotify (such as the extended mix).
-- [ ] `find-longer` Add beatport support since Spotify often only has radio edits
-- [ ] `remove-unwanted` Remove local files with a specific tag from all Spotify playlists, delete local file and remove from iTunes
-- [ ] `backpropagate-tags` Push tags from local files back to Spotify playlists
+* [ ] `create-following-playlist` Creates a playlist of all songs from followed Spotify artists that were released after
+      a given date (persisted after running to allow continuous running of the command)
+* [ ] `find-longer` Find longer versions of songs in Spotify (such as the extended mix).
+* [ ] `find-longer` Add beatport support since Spotify often only has radio edits
+* [ ] `remove-unwanted` Remove local files with a specific tag from all Spotify playlists, delete local file and remove
+      from iTunes
+* [ ] `backpropagate-tags` Push tags from local files back to Spotify playlists
