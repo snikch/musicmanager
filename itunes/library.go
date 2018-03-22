@@ -1,5 +1,8 @@
 package itunes
 
+// This file is copied from https://github.com/ericdaugherty/itunesexport-go
+// All copyright belongs to the original author.
+
 import (
 	"os"
 	"strconv"

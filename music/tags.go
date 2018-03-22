@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/snikch/musicmanager/itunes"
+
 	"github.com/snikch/musicmanager/configuration"
 
 	"github.com/sirupsen/logrus"
@@ -16,15 +18,19 @@ import (
 	"github.com/zmb3/spotify"
 )
 
-func updateFileWithPlaylistTags(ctx context.Context, file types.File, track spotify.FullTrack, playlists []spotify.SimplePlaylist) error {
+func updateFileWithPlaylistTags(ctx context.Context, file types.File, track spotify.FullTrack, playlists []spotify.SimplePlaylist, itunesTrack *itunes.Track) error {
 	l := log.WithField("title", file.Title()).
 		WithField("artist", file.Artist())
 	didUpdateBasic, err := updateBasics(ctx, l, file, track, playlists)
 	if err != nil {
 		return err
 	}
+	didUpdateRating, err := updateRating(ctx, l, file, itunesTrack)
+	if err != nil {
+		return err
+	}
 	didUpdateGenre := updateGenre(ctx, l, file, playlists)
-	if !didUpdateBasic && !didUpdateGenre {
+	if !didUpdateBasic && !didUpdateGenre && !didUpdateRating {
 		return nil
 	}
 	return fail.Trace(file.Save())
@@ -45,6 +51,30 @@ func updateBasics(ctx context.Context, l *logrus.Entry, file types.File, track s
 		l.WithField("year", year).Info("Set Year tag")
 	}
 	return didUpdate, nil
+}
+
+// updateRating adds a star rating to the comments of a file.
+func updateRating(ctx context.Context, l *logrus.Entry, file types.File, track *itunes.Track) (bool, error) {
+	if track == nil {
+		l.Debug("No itunes track supplied for rating")
+		return false, nil
+	}
+
+	oldComment := file.Comment()
+	comment := ParseComment(ctx, oldComment)
+	comment.Rating = track.Rating / 20 // iTunes stores a 1 as 20, 2 -> 40 etc.
+	newComment := comment.String()
+	if oldComment == newComment {
+		l.WithField("old", oldComment).
+			WithField("itunes", track).
+			Debug("No change in comment")
+		return false, nil
+	}
+	l.WithField("old", oldComment).
+		WithField("new", newComment).
+		Info("Updating Comment")
+	file.SetComment(newComment)
+	return true, nil
 }
 
 func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlists []spotify.SimplePlaylist) bool {

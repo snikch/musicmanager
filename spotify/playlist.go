@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"context"
+	"strings"
 
 	"github.com/snikch/api/fail"
 	"github.com/snikch/api/log"
@@ -52,6 +53,7 @@ func CreateMissingPlaylist(ctx context.Context, graph TrackGraph, tracks TrackLo
 		log.
 			WithField("id", track.ID).
 			WithField("name", track.Name).
+			WithField("artist", strings.Join(artistNames(track.Artists), ", ")).
 			WithField("playlists", playlistNames(graph.Playlists[key])).
 			Info("Adding track to playlist")
 		if count >= 100 {
@@ -75,6 +77,14 @@ func CreateMissingPlaylist(ctx context.Context, graph TrackGraph, tracks TrackLo
 		WithField("skipped", tracksSkipped).
 		Info("Playlist updated")
 	return nil
+}
+
+func artistNames(artists []spotify.SimpleArtist) []string {
+	names := make([]string, len(artists))
+	for i := range artists {
+		names[i] = artists[i].Name
+	}
+	return names
 }
 
 func playlistNames(playlists []spotify.SimplePlaylist) []string {

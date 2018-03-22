@@ -9,6 +9,7 @@ import (
 	id3 "github.com/mikkyang/id3-go"
 	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/configuration"
+	"github.com/snikch/musicmanager/itunes"
 	"github.com/snikch/musicmanager/spotify"
 	"github.com/snikch/musicmanager/types"
 )
@@ -51,22 +52,33 @@ func loadDir(loc string) ([]types.File, error) {
 			continue
 		}
 		var song types.Song
-		song, err := id3v2.Open(loc+"/"+dirFile.Name(), id3v2.Options{Parse: true})
+		v2Song, err := id3v2.Open(loc+"/"+dirFile.Name(), id3v2.Options{Parse: true})
 		if err != nil {
 			file, err := id3.Open(loc + "/" + dirFile.Name())
 			if err != nil {
 				return nil, err
 			}
+			comments := file.Comments()
+			if len(comments) > 0 {
+				log.WithField("comments", comments[0]).
+					WithField("len", len(comments)).
+					Warn("Comments")
+			}
 			song = types.ID3Wrapper{file}
+		} else {
+			song = types.ID3V2Wrapper{v2Song}
 		}
-		log.WithField("name", dirFile.Name()).
-			WithField("title", song.Title()).
-			Debug("Found Music Track")
-		files = append(files, types.File{
+		f := types.File{
 			Song:     types.CleanWrapper{song},
 			Filename: dirFile.Name(),
 			Dir:      loc,
-		})
+		}
+
+		log.WithField("name", dirFile.Name()).
+			WithField("title", song.Title()).
+			WithField("comment", f.Comment()).
+			Info("Found Music Track")
+		files = append(files, f)
 	}
 	return files, nil
 }
@@ -94,9 +106,20 @@ func UnionFilesWithGraph(ctx context.Context, files []types.File, graph spotify.
 	return union
 }
 
-func UpdateFilesWithTagsFromGraph(ctx context.Context, files []types.File, graph spotify.TrackGraph) error {
+func UpdateFilesWithTagsFromGraphAndLibrary(ctx context.Context, files []types.File, graph spotify.TrackGraph, library *itunes.Library) error {
+	trackLookup := map[types.SongKey]*itunes.Track{}
+	for _, track := range library.Tracks {
+		trackLookup[types.SongKey{
+			Title:  track.Name,
+			Artist: track.Artist,
+		}] = &track
+	}
 	for _, tuple := range UnionFilesWithGraph(ctx, files, graph) {
-		err := updateFileWithPlaylistTags(ctx, tuple.File, tuple.SpotifyTrack, graph.Playlists[fileKey(tuple.File)])
+		track := trackLookup[types.SongKey{
+			Title:  tuple.File.Title(),
+			Artist: tuple.File.Artist(),
+		}]
+		err := updateFileWithPlaylistTags(ctx, tuple.File, tuple.SpotifyTrack, graph.Playlists[fileKey(tuple.File)], track)
 		if err != nil {
 			return err
 		}
