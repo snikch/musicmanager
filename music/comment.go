@@ -13,7 +13,7 @@ const (
 )
 
 var (
-	mixedInKeyCommentRegex, starRegex *regexp.Regexp
+	mixedInKeyCommentRegex, starRegex, garbageRegex *regexp.Regexp
 )
 
 func init() {
@@ -27,6 +27,12 @@ func init() {
 		panic(err)
 	}
 	starRegex = r
+	//0000041A
+	r, err = regexp.Compile("(\\s?[ABCDEF0-9]{8,16})+")
+	if err != nil {
+		panic(err)
+	}
+	garbageRegex = r
 }
 
 // Comment represents a structured comment which contains information about the song
@@ -68,6 +74,7 @@ func (comment Comment) String() string {
 			strings.Repeat(fullCharacter, comment.Rating)+strings.Repeat(emptyCharacter, 5-comment.Rating),
 		)
 	}
+	comment.Comment = strings.Trim(comment.Comment, " ")
 	if comment.Comment != "" {
 		parts = append(parts, comment.Comment)
 	}
@@ -75,8 +82,13 @@ func (comment Comment) String() string {
 }
 
 // Filter will remove any of the supplied filters from the comment.
-func (comment Comment) Filter(filters []string) {
+func (comment *Comment) Filter(filters []string) {
 	for _, filter := range filters {
 		comment.Comment = strings.Replace(comment.Comment, filter, "", -1)
 	}
+}
+
+// RemoveGarbage removes all instances of weird hex encoded strings.
+func (comment *Comment) RemoveGarbage() {
+	comment.Comment = garbageRegex.ReplaceAllString(comment.Comment, "")
 }

@@ -77,49 +77,56 @@ func loadDir(loc string) ([]types.File, error) {
 		log.WithField("name", dirFile.Name()).
 			WithField("title", song.Title()).
 			WithField("comment", f.Comment()).
-			Info("Found Music Track")
+			Debug("Found Music Track")
 		files = append(files, f)
 	}
 	return files, nil
 }
 
-func UnionFilesWithGraph(ctx context.Context, files []types.File, graph spotify.TrackGraph) []types.FileWithSpotifyTrack {
-	union := make([]types.FileWithSpotifyTrack, 0, len(files))
-	for _, file := range files {
-		key := fileKey(file)
-		if key.Artist == "" || key.Title == "" {
-			log.WithField("key", key).
-				WithField("name", file.Filename).
-				Debug("Skipping unknown track")
-			continue
-		}
+func FilesToFileContexts(ctx context.Context, files []types.File) types.FileContexts {
+	out := types.FileContexts{}
+	for i := range files {
+		out[fileKey(files[i])] = types.FileWithContext{File: files[i]}
+	}
+	return out
+}
+
+func HydrateSpotifyOnContexts(ctx context.Context, contexts types.FileContexts, graph spotify.TrackGraph) types.FileContexts {
+	for key, fileContext := range contexts {
 		if track, exists := graph.Tracks[key]; exists {
 			log.WithField("key", key).WithField("spotify id", track.ID.String()).Debug("Found track")
-			union = append(union, types.FileWithSpotifyTrack{
-				File:         file,
-				SpotifyTrack: track,
-			})
+			fileContext.SpotifyTrack = &track
+			fileContext.SpotifyPlaylists = graph.Playlists[key]
+			contexts[key] = fileContext
 		} else {
 			log.WithField("key", key).Debug("Couldn't find spotify track")
 		}
 	}
-	return union
+	return contexts
 }
 
-func UpdateFilesWithTagsFromGraphAndLibrary(ctx context.Context, files []types.File, graph spotify.TrackGraph, library *itunes.Library) error {
-	trackLookup := map[types.SongKey]*itunes.Track{}
-	for _, track := range library.Tracks {
+func HydrateITunesOnContexts(ctx context.Context, contexts types.FileContexts, library *itunes.Library) types.FileContexts {
+	trackLookup := map[types.SongKey]itunes.Track{}
+	for key := range library.Tracks {
+		track := library.Tracks[key]
 		trackLookup[types.SongKey{
 			Title:  track.Name,
 			Artist: track.Artist,
-		}] = &track
+		}] = track
 	}
-	for _, tuple := range UnionFilesWithGraph(ctx, files, graph) {
-		track := trackLookup[types.SongKey{
-			Title:  tuple.File.Title(),
-			Artist: tuple.File.Artist(),
-		}]
-		err := updateFileWithPlaylistTags(ctx, tuple.File, tuple.SpotifyTrack, graph.Playlists[fileKey(tuple.File)], track)
+	for key, fileContext := range contexts {
+		track, ok := trackLookup[key]
+		if ok {
+			fileContext.ITunesTrack = &track
+		}
+		contexts[key] = fileContext
+	}
+	return contexts
+}
+
+func UpdateFilesTags(ctx context.Context, contexts types.FileContexts) error {
+	for _, fileContext := range contexts {
+		err := updateFileWithPlaylistTags(ctx, fileContext)
 		if err != nil {
 			return err
 		}

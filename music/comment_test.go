@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/configuration"
 )
 
@@ -36,6 +37,17 @@ func TestParse(t *testing.T) {
 			t.Fatalf("Comment: Expected %s to match %s", comment.Comment, test.Comment.Comment)
 		}
 	}
+}
+
+func TestGarbage(t *testing.T) {
+	comment := Comment{
+		Comment: "Testing 0000041A 00000329 000024F4 0000193F 00023068 0001CA5E 00004A5B 00004AFE 0002AD4E 000480DB 00000000 00000210 00000AC5 0000000001398B2B 00000000 011C4FAD 00000000 00000000 00000000 00000000 00000000 00000000",
+	}
+	comment.RemoveGarbage()
+	if comment.Comment != "Testing" {
+		t.Fatalf("Expected just 'Testing', got %s", comment.Comment)
+	}
+	log.WithField("out", comment.Comment).Debug("Comment")
 }
 
 func testComment(key, energy, comment string, rating int) Comment {

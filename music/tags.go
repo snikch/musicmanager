@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/snikch/musicmanager/itunes"
-
 	"github.com/snikch/musicmanager/configuration"
 
 	"github.com/sirupsen/logrus"
@@ -15,69 +13,83 @@ import (
 	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/spotifyclient"
 	"github.com/snikch/musicmanager/types"
-	"github.com/zmb3/spotify"
 )
 
-func updateFileWithPlaylistTags(ctx context.Context, file types.File, track spotify.FullTrack, playlists []spotify.SimplePlaylist, itunesTrack *itunes.Track) error {
-	l := log.WithField("title", file.Title()).
-		WithField("artist", file.Artist())
-	didUpdateBasic, err := updateBasics(ctx, l, file, track, playlists)
-	if err != nil {
-		return err
+var (
+	tagProcessors = map[string]func(context.Context, *logrus.Entry, types.FileWithContext) (bool, error){
+		"year":    updateYear,
+		"comment": updateComment,
+		"genre":   updateGenre,
 	}
-	didUpdateRating, err := updateRating(ctx, l, file, itunesTrack)
-	if err != nil {
-		return err
+)
+
+func updateFileWithPlaylistTags(ctx context.Context, fileContext types.FileWithContext) error {
+	l := log.WithField("title", fileContext.Title()).
+		WithField("artist", fileContext.Artist())
+	anyUpdate := false
+	for name, processor := range tagProcessors {
+		didUpdate, err := processor(ctx, l.WithField("processor", name), fileContext)
+		if err != nil {
+			return err
+		}
+		if !anyUpdate && didUpdate {
+			anyUpdate = true
+		}
 	}
-	didUpdateGenre := updateGenre(ctx, l, file, playlists)
-	if !didUpdateBasic && !didUpdateGenre && !didUpdateRating {
+	if !anyUpdate {
 		return nil
 	}
-	return fail.Trace(file.Save())
+	return fail.Trace(fileContext.Save())
 }
 
-func updateBasics(ctx context.Context, l *logrus.Entry, file types.File, track spotify.FullTrack, playlists []spotify.SimplePlaylist) (bool, error) {
+func updateYear(ctx context.Context, l *logrus.Entry, fileContext types.FileWithContext) (bool, error) {
+	if fileContext.SpotifyTrack == nil {
+		return false, nil
+	}
 	didUpdate := false
-	if file.Year() == "" {
+	if fileContext.Year() == "" {
 		client := spotifyclient.ContextClient(ctx)
-		album, err := client.GetAlbum(track.Album.ID)
+		album, err := client.GetAlbum(fileContext.SpotifyTrack.Album.ID)
 		if err != nil {
-			log.WithError(err).WithField("id", track.Album.ID).Error("Failed to get album from spotify to update Year")
+			log.WithError(err).WithField("id", fileContext.SpotifyTrack.Album.ID).Error("Failed to get album from spotify to update Year")
 			return false, err
 		}
 		year := strconv.Itoa(album.ReleaseDateTime().Year())
-		file.SetYear(year)
+		fileContext.SetYear(year)
 		didUpdate = true
 		l.WithField("year", year).Info("Set Year tag")
 	}
 	return didUpdate, nil
 }
 
-// updateRating adds a star rating to the comments of a file.
-func updateRating(ctx context.Context, l *logrus.Entry, file types.File, track *itunes.Track) (bool, error) {
-	if track == nil {
+// updateComment adds a star rating to the comments of a file and cleans out the crap.
+func updateComment(ctx context.Context, l *logrus.Entry, fileContext types.FileWithContext) (bool, error) {
+	if fileContext.ITunesTrack == nil {
 		l.Debug("No itunes track supplied for rating")
 		return false, nil
 	}
 
-	oldComment := file.Comment()
+	oldComment := fileContext.Comment()
 	comment := ParseComment(ctx, oldComment)
-	comment.Rating = track.Rating / 20 // iTunes stores a 1 as 20, 2 -> 40 etc.
+	comment.Rating = fileContext.ITunesTrack.Rating / 20 // iTunes stores a 1 as 20, 2 -> 40 etc.
+	// Remove any shit we don't like in comments.
+	comment.Filter(configuration.ContextConfiguration(ctx).MusicFiles.CommentRemovals)
+	comment.RemoveGarbage()
 	newComment := comment.String()
 	if oldComment == newComment {
 		l.WithField("old", oldComment).
-			WithField("itunes", track).
+			WithField("itunes", fileContext.ITunesTrack).
 			Debug("No change in comment")
 		return false, nil
 	}
 	l.WithField("old", oldComment).
 		WithField("new", newComment).
 		Info("Updating Comment")
-	file.SetComment(newComment)
+	fileContext.SetComment(newComment)
 	return true, nil
 }
 
-func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlists []spotify.SimplePlaylist) bool {
+func updateGenre(ctx context.Context, l *logrus.Entry, fileContext types.FileWithContext) (bool, error) {
 	targetTags := map[string]bool{}
 	tagRemovals := map[string]bool{}
 	conf := configuration.ContextConfiguration(ctx)
@@ -85,7 +97,7 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 	for _, tag := range conf.MusicFiles.TagRemovals {
 		removalLookup[tag] = true
 	}
-	for _, playlist := range playlists {
+	for _, playlist := range fileContext.SpotifyPlaylists {
 		name := playlist.Name
 		for match, replacement := range conf.MusicFiles.TagReplacements {
 			name = strings.Replace(name, match, replacement, -1)
@@ -97,7 +109,7 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 		}
 	}
 	existingTags := map[string]bool{}
-	for _, genre := range strings.Split(file.Genre(), " ") {
+	for _, genre := range strings.Split(fileContext.Genre(), " ") {
 		if genre == "" {
 			continue
 		}
@@ -116,7 +128,7 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 		WithField("target", targetTags)
 	if reflect.DeepEqual(targetTags, existingTags) && len(removingTags) == 0 {
 		l.Debug("No tag update required")
-		return false
+		return false, nil
 	}
 	genres := []string{}
 	for genre := range existingTags {
@@ -131,13 +143,13 @@ func updateGenre(ctx context.Context, l *logrus.Entry, file types.File, playlist
 	}
 	if len(addedTags) == 0 && len(removingTags) == 0 {
 		l.Debug("No tags to change")
-		return false
+		return false, nil
 	}
 	l.WithField("added", addedTags).
 		WithField("all", genres).
 		Info("Adjusting tags")
-	file.SetGenre(strings.Join(genres, " "))
-	return true
+	fileContext.SetGenre(strings.Join(genres, " "))
+	return true, nil
 }
 
 func playlistNameToGenres(ctx context.Context, name string) []string {

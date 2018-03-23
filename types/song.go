@@ -5,6 +5,7 @@ import (
 
 	"github.com/bogem/id3v2"
 	id3 "github.com/mikkyang/id3-go"
+	"github.com/snikch/musicmanager/itunes"
 	"github.com/zmb3/spotify"
 )
 
@@ -14,9 +15,12 @@ type File struct {
 	Dir      string
 }
 
-type FileWithSpotifyTrack struct {
-	File         File
-	SpotifyTrack spotify.FullTrack
+type FileContexts map[SongKey]FileWithContext
+type FileWithContext struct {
+	File
+	SpotifyTrack     *spotify.FullTrack
+	SpotifyPlaylists []spotify.SimplePlaylist
+	ITunesTrack      *itunes.Track
 }
 
 type Song interface {
@@ -61,7 +65,12 @@ func (tag ID3V2Wrapper) Comment() string {
 	}
 	var value string
 	for _, frame := range comments {
-		value = value + frame.(id3v2.CommentFrame).Text
+		f := frame.(id3v2.CommentFrame)
+		if f.Language != "eng" {
+			continue
+		}
+		// log.WithField("Frame", f).Info("frame")
+		value = value + f.Text
 	}
 	return value
 }

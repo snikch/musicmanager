@@ -24,5 +24,8 @@ func TagFiles(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return music.UpdateFilesWithTagsFromGraphAndLibrary(ctx, files, graph, library)
+	contexts := music.FilesToFileContexts(ctx, files)
+	contexts = music.HydrateSpotifyOnContexts(ctx, contexts, graph)
+	contexts = music.HydrateITunesOnContexts(ctx, contexts, library)
+	return music.UpdateFilesTags(ctx, contexts)
 }

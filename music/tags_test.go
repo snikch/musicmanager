@@ -14,14 +14,19 @@ import (
 )
 
 type MockSong struct {
-	genre  string
-	year   string
-	title  string
-	artist string
+	comment string
+	genre   string
+	year    string
+	title   string
+	artist  string
 }
 
 func (f *MockSong) Artist() string {
 	return f.artist
+}
+
+func (f *MockSong) Comment() string {
+	return f.comment
 }
 
 func (f *MockSong) Genre() string {
@@ -34,6 +39,10 @@ func (f *MockSong) Year() string {
 
 func (f *MockSong) Title() string {
 	return f.title
+}
+
+func (f *MockSong) SetComment(comment string) {
+	f.comment = comment
 }
 
 func (f *MockSong) SetGenre(genre string) {
@@ -60,10 +69,10 @@ func newMockFile(artist, title string) types.File {
 func TestUpdateGenreAddsTags(t *testing.T) {
 	ctx := configuration.ContextWithConfiguration(context.Background())
 	song := newMockFile("artist", "song")
-	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1 P2"},
 		{Name: "P1 P3"},
-	})
+	}})
 	tagMatch(t, song.Genre(), "p1 p2 p3")
 }
 
@@ -71,9 +80,9 @@ func TestUpdateGenreLeavesTags(t *testing.T) {
 	ctx := configuration.ContextWithConfiguration(context.Background())
 	song := newMockFile("artist", "song")
 	song.SetGenre("x1")
-	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1 P2"},
-	})
+	}})
 	tagMatch(t, song.Genre(), "x1 p1 p2")
 }
 
@@ -83,9 +92,9 @@ func TestUpdateGenreRemovesTags(t *testing.T) {
 	conf.MusicFiles.TagRemovals = []string{"p1", "x1"}
 	song := newMockFile("artist", "song")
 	song.SetGenre("x1")
-	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1 P2"},
-	})
+	}})
 	tagMatch(t, song.Genre(), "p2")
 }
 
@@ -95,9 +104,9 @@ func TestUpdateGenreRemovesTagsWithNoUpdate(t *testing.T) {
 	conf.MusicFiles.TagRemovals = []string{"x1"}
 	song := newMockFile("artist", "song")
 	song.SetGenre("x1 p1")
-	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1"},
-	})
+	}})
 	tagMatch(t, song.Genre(), "p1")
 }
 
@@ -110,10 +119,10 @@ func TestUpdateGenreReplacesTags(t *testing.T) {
 		":":       "",
 	}
 	song := newMockFile("artist", "song")
-	updateGenre(ctx, log.WithField("test", nil), song, []spotify.SimplePlaylist{
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1 One: P2"},
 		{Name: "P1 None: P3"},
-	})
+	}})
 	tagMatch(t, song.Genre(), "p1one p2 p3")
 }
 

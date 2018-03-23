@@ -41,7 +41,7 @@ Tag local files with the following:
 * Genre: Converts playlist names to tags (e.g. House: Vocal becomes "house" and "vocal"), and adds them in the Genre ID3
   tag
 * Year: Ensures the Year ID3 tag is set (from album information in Spotify)
-* Comment: Adds the iTunes rating to the comments (if one exists)
+* Comment: Adds the iTunes rating to the comments (if one exists), and cleans up shitty comments from download services
 
 ### follow-artists
 
