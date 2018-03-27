@@ -3,6 +3,7 @@ package music
 import (
 	"context"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -148,6 +149,7 @@ func updateGenre(ctx context.Context, l *logrus.Entry, fileContext types.FileWit
 	l.WithField("added", addedTags).
 		WithField("all", genres).
 		Info("Adjusting tags")
+	sort.Strings(genres)
 	fileContext.SetGenre(strings.Join(genres, " "))
 	return true, nil
 }
