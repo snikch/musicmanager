@@ -2,12 +2,12 @@ package music
 
 import (
 	"context"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/snikch/musicmanager/configuration"
+	"github.com/zmb3/spotify"
 
 	"github.com/sirupsen/logrus"
 	"github.com/snikch/api/fail"
@@ -91,70 +91,29 @@ func updateComment(ctx context.Context, l *logrus.Entry, fileContext types.FileW
 }
 
 func updateGenre(ctx context.Context, l *logrus.Entry, fileContext types.FileWithContext) (bool, error) {
-	targetTags := map[string]bool{}
-	tagRemovals := map[string]bool{}
-	conf := configuration.ContextConfiguration(ctx)
-	removalLookup := map[string]bool{}
-	for _, tag := range conf.MusicFiles.TagRemovals {
-		removalLookup[tag] = true
-	}
-	for _, playlist := range fileContext.SpotifyPlaylists {
-		name := playlist.Name
-		for match, replacement := range conf.MusicFiles.TagReplacements {
-			name = strings.Replace(name, match, replacement, -1)
-		}
-		for _, genre := range playlistNameToGenres(ctx, name) {
-			if _, ok := removalLookup[genre]; !ok {
-				targetTags[genre] = true
-			}
-		}
-	}
-	existingTags := map[string]bool{}
-	for _, genre := range strings.Split(fileContext.Genre(), " ") {
-		if genre == "" {
-			continue
-		}
-		if _, ok := removalLookup[genre]; ok {
-			tagRemovals[genre] = true
-		} else {
-			existingTags[genre] = true
-		}
-	}
-	removingTags := make([]string, 0, len(tagRemovals))
-	for tag := range tagRemovals {
-		removingTags = append(removingTags, tag)
-	}
-	l = l.WithField("removals", removingTags).
-		WithField("existing", existingTags).
-		WithField("target", targetTags)
-	if reflect.DeepEqual(targetTags, existingTags) && len(removingTags) == 0 {
-		l.Debug("No tag update required")
+	removals := removalTags(ctx)
+	playlist, removedPlaylist := removeTags(playlistTags(ctx, fileContext.SpotifyPlaylists), removals)
+	current, removedCurrent := removeTags(currentTags(replaceTags(ctx, fileContext.Genre())), removals)
+	target := mergeTags(playlist, current)
+	tags := flattenTags(target)
+	sort.Strings(tags)
+	l = l.WithField("playlist", flattenTags(playlist)).
+		WithField("current", fileContext.Genre()).
+		WithField("removed", flattenTags(mergeTags(removedPlaylist, removedCurrent))).
+		WithField("target", tags)
+	genre := strings.Join(tags, " ")
+	if genre == fileContext.Genre() {
+		l.Debug("No genre update required")
 		return false, nil
 	}
-	genres := []string{}
-	for genre := range existingTags {
-		genres = append(genres, genre)
-	}
-	addedTags := []string{}
-	for genre := range targetTags {
-		if _, exists := existingTags[genre]; !exists {
-			addedTags = append(addedTags, genre)
-			genres = append(genres, genre)
-		}
-	}
-	if len(addedTags) == 0 && len(removingTags) == 0 {
-		l.Debug("No tags to change")
-		return false, nil
-	}
-	l.WithField("added", addedTags).
-		WithField("all", genres).
+	added, _ := removeTags(target, current)
+	l.WithField("added", flattenTags(added)).
 		Info("Adjusting tags")
-	sort.Strings(genres)
-	fileContext.SetGenre(strings.Join(genres, " "))
+	fileContext.SetGenre(genre)
 	return true, nil
 }
 
-func playlistNameToGenres(ctx context.Context, name string) []string {
+func playlistNameToGenres(name string) []string {
 	parts := strings.Split(name, " ")
 	genres := make([]string, 0, len(parts))
 	for i := range parts {
@@ -164,4 +123,70 @@ func playlistNameToGenres(ctx context.Context, name string) []string {
 		}
 	}
 	return genres
+}
+
+func playlistTags(ctx context.Context, playlists []spotify.SimplePlaylist) map[string]bool {
+	lookup := map[string]bool{}
+	for _, playlist := range playlists {
+		name := replaceTags(ctx, playlist.Name)
+		for _, genre := range playlistNameToGenres(name) {
+			lookup[strings.ToLower(genre)] = true
+		}
+	}
+	return lookup
+}
+func currentTags(genre string) map[string]bool {
+	lookup := map[string]bool{}
+	for _, genre := range strings.Split(genre, " ") {
+		if genre == "" {
+			continue
+		}
+		lookup[strings.ToLower(genre)] = true
+	}
+	return lookup
+}
+func removeTags(tags, removals map[string]bool) (map[string]bool, map[string]bool) {
+	removed := map[string]bool{}
+	for tag := range tags {
+		if !removals[tag] {
+			continue
+		}
+		removed[tag] = true
+		delete(tags, tag)
+	}
+	return tags, removed
+}
+
+func flattenTags(lookup map[string]bool) []string {
+	tags := make([]string, len(lookup))
+	i := 0
+	for tag := range lookup {
+		tags[i] = tag
+		i++
+	}
+	return tags
+}
+
+func replaceTags(ctx context.Context, genre string) string {
+	conf := configuration.ContextConfiguration(ctx)
+	for search, replace := range conf.MusicFiles.TagReplacements {
+		genre = strings.Replace(genre, search, replace, -1)
+	}
+	return genre
+}
+
+func removalTags(ctx context.Context) map[string]bool {
+	removals := map[string]bool{}
+	conf := configuration.ContextConfiguration(ctx)
+	for _, tag := range conf.MusicFiles.TagRemovals {
+		removals[strings.ToLower(tag)] = true
+	}
+	return removals
+}
+
+func mergeTags(a, b map[string]bool) map[string]bool {
+	for tag := range a {
+		b[tag] = true
+	}
+	return b
 }

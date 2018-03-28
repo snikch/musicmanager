@@ -3,7 +3,6 @@ package music
 import (
 	"context"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
@@ -83,7 +82,7 @@ func TestUpdateGenreLeavesTags(t *testing.T) {
 	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
 		{Name: "P1 P2"},
 	}})
-	tagMatch(t, song.Genre(), "x1 p1 p2")
+	tagMatch(t, song.Genre(), "p1 p2 x1")
 }
 
 func TestUpdateGenreRemovesTags(t *testing.T) {
@@ -126,11 +125,20 @@ func TestUpdateGenreReplacesTags(t *testing.T) {
 	tagMatch(t, song.Genre(), "p1one p2 p3")
 }
 
+func TestUpdateGenreSortsUnchangedTags(t *testing.T) {
+	ctx := configuration.ContextWithConfiguration(context.Background())
+	song := newMockFile("artist", "song")
+	song.SetGenre("b a c")
+	updateGenre(ctx, log.WithField("test", nil), types.FileWithContext{File: song, SpotifyPlaylists: []spotify.SimplePlaylist{
+		{Name: "a"},
+		{Name: "b"},
+	}})
+	tagMatch(t, song.Genre(), "a b c")
+}
+
 func tagMatch(t *testing.T, a, b string) {
 	aSlice := strings.Split(a, " ")
 	bSlice := strings.Split(b, " ")
-	sort.Strings(aSlice)
-	sort.Strings(bSlice)
 	if !reflect.DeepEqual(aSlice, bSlice) {
 		t.Fatalf("Expected '%s' genre but got '%s'", b, a)
 	}
