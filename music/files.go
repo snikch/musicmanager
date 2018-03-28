@@ -2,16 +2,20 @@ package music
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strings"
 
 	"github.com/bogem/id3v2"
+	"github.com/everdev/mack"
 	id3 "github.com/mikkyang/id3-go"
+	"github.com/snikch/api/fail"
 	"github.com/snikch/api/log"
 	"github.com/snikch/musicmanager/configuration"
 	"github.com/snikch/musicmanager/itunes"
 	"github.com/snikch/musicmanager/spotify"
+	"github.com/snikch/musicmanager/spotifyclient"
 	"github.com/snikch/musicmanager/types"
 )
 
@@ -25,7 +29,6 @@ func GetAllFiles(ctx context.Context) ([]types.File, error) {
 			return nil, err
 		}
 		files = append(files, dirFiles...)
-		log.WithField("files", len(dirFiles)).WithField("dir", dir).Debug("Found music files in dir")
 	}
 	log.WithField("total", len(files)).Info("Found local music files")
 	return files, nil
@@ -137,8 +140,8 @@ func UpdateFilesTags(ctx context.Context, contexts types.FileContexts) error {
 
 func fileKey(file types.File) types.SongKey {
 	return types.SongKey{
-		Artist: strings.ToLower(file.Artist()),
-		Title:  strings.ToLower(file.Title()),
+		Artist: file.Artist(),
+		Title:  file.Title(),
 	}
 }
 
@@ -160,4 +163,52 @@ func LeftOuterJoinFilesToGraph(ctx context.Context, files []types.File, graph sp
 		}
 	}
 	return tracks
+}
+
+func RemoveUnwanted(ctx context.Context, graph spotify.TrackGraph, contexts types.FileContexts) (bool, error) {
+	didRemove := false
+	client := spotifyclient.ContextClient(ctx)
+	for _, fileContext := range contexts {
+		key := fileKey(fileContext.File)
+		l := log.WithField("key", key)
+
+		deleteTag := configuration.ContextConfiguration(ctx).MusicFiles.DeleteTag
+		if deleteTag == "" {
+			deleteTag = "delete"
+		}
+		if !strings.Contains(fileContext.Genre(), deleteTag) {
+			continue
+		}
+
+		if fileContext.SpotifyTrack != nil {
+			for _, playlist := range fileContext.SpotifyPlaylists {
+				didRemove = true
+				l.WithField("playlist", playlist.Name).
+					WithField("trackID", fileContext.SpotifyTrack.ID).
+					WithField("playlistID", playlist.ID).
+					Warn("Removing track from playlist")
+				_, err := client.RemoveTracksFromPlaylist(graph.UserID, playlist.ID, fileContext.SpotifyTrack.ID)
+				if err != nil {
+					return false, fail.Trace(err)
+				}
+			}
+		}
+
+		if fileContext.ITunesTrack != nil {
+			didRemove = true
+			l.Warn("Removing track from iTunes")
+			// set dbid to database ID of theTrack
+			// set theTrack to contents of t
+			_, err := mack.Tell("iTunes", fmt.Sprintf(`
+				set theTrack to (some track of playlist "Library" whose database ID is %d)
+				set floc to (get location of theTrack)
+				delete theTrack
+				tell application "Finder" to delete floc
+				`, fileContext.ITunesTrack.TrackID))
+			if err != nil {
+				return false, fail.Trace(err)
+			}
+		}
+	}
+	return didRemove, nil
 }

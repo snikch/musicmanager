@@ -27,6 +27,7 @@ type Configuration struct {
 	MusicFiles struct {
 		TagReplacements map[string]string
 		TagRemovals     []string
+		DeleteTag       string
 		CommentRemovals []string
 		Dirs            []string
 	}

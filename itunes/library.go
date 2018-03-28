@@ -19,14 +19,14 @@ type Library struct {
 	Features            int
 	ShowContentRating   bool   `plist:"Show Content Ratings"`
 	MusicFolder         string `plist:"Music Folder"`
-	LibraryPersistentId string `plist:"Library Persistent ID"`
+	LibraryPersistentID string `plist:"Library Persistent ID"`
 	Tracks              map[string]Track
 	Playlists           []Playlist
 	PlaylistMap         map[string]Playlist
 }
 
 type Track struct {
-	TrackId             int `plist:"Track ID"`
+	TrackID             int `plist:"Track ID"`
 	Name                string
 	Artist              string
 	AlbumArtist         string `plist:"Album Artist"`
@@ -51,7 +51,7 @@ type Track struct {
 	AlbumRating         int    `plist:"Album Rating"`
 	AlbumRatingComputed bool   `plist:"Album Rating Computed"`
 	ArtworkCount        int    `plist:"Artwork Count"`
-	PersistentId        string `plist:"Persistent ID"`
+	PersistentID        string `plist:"Persistent ID"`
 	TrackType           string `plist:"Track Type"`
 	Location            string
 	FileFolderCount     int `plist:"File Folder Count"`
@@ -61,8 +61,8 @@ type Track struct {
 type Playlist struct {
 	Name                 string
 	Master               bool
-	PlaylistId           int    `plist:"Playlist ID"`
-	PlaylistPersistentId string `plist:"Playlist Persistent ID"`
+	PlaylistID           int    `plist:"Playlist ID"`
+	PlaylistPersistentID string `plist:"Playlist Persistent ID"`
 	DistinguishedKind    int    `plist:"Distinguished Kind"`
 	Visible              bool
 	AllItems             bool           `plist:"All Items"`
@@ -72,7 +72,7 @@ type Playlist struct {
 }
 
 type PlaylistItem struct {
-	TrackId int `plist:"Track ID"`
+	TrackID int `plist:"Track ID"`
 }
 
 func LoadLibrary(fileLocation string) (returnLibrary *Library, err error) {
@@ -107,7 +107,7 @@ func LoadLibrary(fileLocation string) (returnLibrary *Library, err error) {
 
 func (playlist *Playlist) Tracks(library *Library) (tracks []Track) {
 	for _, item := range playlist.PlaylistItems {
-		track, ok := library.Tracks[strconv.FormatInt(int64(item.TrackId), 10)]
+		track, ok := library.Tracks[strconv.FormatInt(int64(item.TrackID), 10)]
 		if ok {
 			tracks = append(tracks, track)
 		}

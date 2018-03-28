@@ -43,6 +43,14 @@ Tag local files with the following:
 * Year: Ensures the Year ID3 tag is set (from album information in Spotify)
 * Comment: Adds the iTunes rating to the comments (if one exists), and cleans up shitty comments from download services
 
+### remove-unwanted
+
+Removes unwanted tracks. Any track with the tag `delete` (or another tag chosen via config) is removed from:
+
+* iTunes
+* Spotify Playlists
+* Disk
+
 ### follow-artists
 
 Follows on Spotify all artists with a 3⭐ rating or higher.
@@ -54,7 +62,5 @@ To be written
 * [ ] `create-following-playlist` Creates a playlist of all songs from followed Spotify artists that were released after
       a given date (persisted after running to allow continuous running of the command)
 * [ ] `find-longer` Find longer versions of songs in Spotify (such as the extended mix).
-* [ ] `find-longer` Add beatport support since Spotify often only has radio edits
-* [ ] `remove-unwanted` Remove local files with a specific tag from all Spotify playlists, delete local file and remove
-      from iTunes
+* [ ] `find-longer` Add beatport support since Spotify often only has radio edits from iTunes
 * [ ] `backpropagate-tags` Push tags from local files back to Spotify playlists

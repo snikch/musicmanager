@@ -32,6 +32,7 @@ func init() {
 		spotify.ScopeUserReadPrivate,
 		spotify.ScopePlaylistReadPrivate,
 		spotify.ScopePlaylistModifyPrivate,
+		spotify.ScopePlaylistModifyPublic,
 		spotify.ScopeUserFollowRead,
 		spotify.ScopeUserFollowModify,
 	}

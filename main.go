@@ -40,6 +40,8 @@ func main() {
 		err = commands.RefreshSpotify(ctx)
 	case "tag-files":
 		err = commands.TagFiles(ctx)
+	case "remove-unwanted":
+		err = commands.RemoveUnwanted(ctx)
 	case "create-missing-playlist":
 		err = commands.CreateMissingPlaylist(ctx)
 	default:
@@ -51,6 +53,6 @@ func main() {
 }
 
 func displayHelp() {
-	fmt.Println("Select an arg: refresh-spotify tag-files create-missing-playlist")
+	fmt.Println("Select an arg: refresh-spotify tag-files create-missing-playlist remove-unwanted")
 	os.Exit(1)
 }
