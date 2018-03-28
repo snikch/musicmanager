@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/bogem/id3v2"
 	id3 "github.com/mikkyang/id3-go"
@@ -136,8 +137,8 @@ func UpdateFilesTags(ctx context.Context, contexts types.FileContexts) error {
 
 func fileKey(file types.File) types.SongKey {
 	return types.SongKey{
-		Artist: file.Artist(),
-		Title:  file.Title(),
+		Artist: strings.ToLower(file.Artist()),
+		Title:  strings.ToLower(file.Title()),
 	}
 }
 
