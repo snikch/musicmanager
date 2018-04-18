@@ -78,7 +78,8 @@ func (tag ID3V2Wrapper) Comment() string {
 func (tag ID3V2Wrapper) SetComment(comment string) {
 	tag.Tag.DeleteFrames(tag.Tag.CommonID("Comments"))
 	tag.Tag.AddCommentFrame(id3v2.CommentFrame{
-		Encoding: id3v2.EncodingUTF8,
+		Encoding: id3v2.EncodingISO,
+		// Encoding: id3v2.EncodingUTF8,
 		Language: "eng",
 		Text:     comment,
 	})

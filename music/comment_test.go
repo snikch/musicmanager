@@ -10,18 +10,18 @@ import (
 
 func TestParse(t *testing.T) {
 	ctx := configuration.ContextWithConfiguration(context.Background())
-	for _, test := range []struct {
+	for i, test := range []struct {
 		Raw     string
 		Comment Comment
 	}{
 		{"", testComment("", "", "", 0)},
 		{"Testing just a comment", testComment("", "", "Testing just a comment", 0)},
-		{"⭑⭑⭑⭑⭒", testComment("", "", "", 4)},
+		{"xxxx+", testComment("", "", "", 4)},
 		{"4A - Energy 2 - Basic MIK", testComment("4A", "Energy 2", "Basic MIK", 0)},
 		{"4A/5A - Energy 2 - Mixed MIK", testComment("4A/5A", "Energy 2", "Mixed MIK", 0)},
 		{"All - Energy 2 - All MIK", testComment("All", "Energy 2", "All MIK", 0)},
-		{"6A - Energy 2 - ⭑⭑⭑⭒⭒ - MIK + Rating", testComment("6A", "Energy 2", "MIK + Rating", 3)},
-		{"7A - Energy 2 - ⭑⭑⭒⭒⭒ - Everything", testComment("7A", "Energy 2", "Everything", 2)},
+		{"6A - Energy 2 - xxx++ - MIK + Rating", testComment("6A", "Energy 2", "MIK + Rating", 3)},
+		{"7A - Energy 2 - xx+++ - Everything", testComment("7A", "Energy 2", "Everything", 2)},
 	} {
 		comment := ParseComment(ctx, test.Raw)
 		if comment.Key != test.Comment.Key {
@@ -31,7 +31,7 @@ func TestParse(t *testing.T) {
 			t.Fatalf("Energy: Expected %s to match %s", comment.Energy, test.Comment.Energy)
 		}
 		if comment.Rating != test.Comment.Rating {
-			t.Fatalf("Rating: Expected %d to match %d", comment.Rating, test.Comment.Rating)
+			t.Fatalf("Rating %d: Expected %d to match %d", i, comment.Rating, test.Comment.Rating)
 		}
 		if comment.Comment != test.Comment.Comment {
 			t.Fatalf("Comment: Expected %s to match %s", comment.Comment, test.Comment.Comment)

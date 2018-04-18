@@ -168,17 +168,20 @@ func LeftOuterJoinFilesToGraph(ctx context.Context, files []types.File, graph sp
 func RemoveUnwanted(ctx context.Context, graph spotify.TrackGraph, contexts types.FileContexts) (bool, error) {
 	didRemove := false
 	client := spotifyclient.ContextClient(ctx)
+	deleteTag := configuration.ContextConfiguration(ctx).MusicFiles.DeleteTag
+	if deleteTag == "" {
+		deleteTag = "delete"
+	}
+	log.WithField("tag", deleteTag).Info("Starting to remove unwanted tracks")
 	for _, fileContext := range contexts {
 		key := fileKey(fileContext.File)
 		l := log.WithField("key", key)
 
-		deleteTag := configuration.ContextConfiguration(ctx).MusicFiles.DeleteTag
-		if deleteTag == "" {
-			deleteTag = "delete"
-		}
 		if !strings.Contains(fileContext.Genre(), deleteTag) {
 			continue
 		}
+
+		l.Warn("Will remove")
 
 		if fileContext.SpotifyTrack != nil {
 			for _, playlist := range fileContext.SpotifyPlaylists {

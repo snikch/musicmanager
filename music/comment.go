@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/snikch/api/log"
 )
 
 const (
-	fullCharacter  = "⭑"
-	emptyCharacter = "⭒"
+	fullCharacter = "x"
+	// fullCharacter  = "⭑"
+	emptyCharacter  = "+"
+	matchCharacters = `*Xx×·\+`
 )
 
 var (
@@ -22,7 +26,7 @@ func init() {
 		panic(err)
 	}
 	mixedInKeyCommentRegex = r
-	r, err = regexp.Compile(fmt.Sprintf("([%s%s]+)\\s?-?\\s?", emptyCharacter, fullCharacter))
+	r, err = regexp.Compile(fmt.Sprintf("([%s]{2,5})\\s?-?\\s?", matchCharacters))
 	if err != nil {
 		panic(err)
 	}
@@ -52,6 +56,7 @@ func ParseComment(ctx context.Context, raw string) Comment {
 	// Check for the mixed in key values, camelot key and energy.
 	mikValue := string(mixedInKeyCommentRegex.Find([]byte(raw)))
 	mikParts := strings.Split(strings.TrimRight(mikValue, " - "), " - ")
+	log.WithField("mikParts", mikParts).WithField("stars", stars).Debug("split")
 	if len(mikParts) == 2 {
 		comment.Key = mikParts[0]
 		comment.Energy = mikParts[1]
@@ -72,9 +77,10 @@ func (comment Comment) String() string {
 		parts = append(
 			parts,
 			strings.Repeat(fullCharacter, comment.Rating)+strings.Repeat(emptyCharacter, 5-comment.Rating),
+			// strings.Repeat(newCharacter, comment.Rating),
 		)
 	}
-	comment.Comment = strings.Trim(comment.Comment, " ")
+	comment.Comment = strings.Trim(comment.Comment, " -")
 	if comment.Comment != "" {
 		parts = append(parts, comment.Comment)
 	}
