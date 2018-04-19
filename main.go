@@ -53,6 +53,6 @@ func main() {
 }
 
 func displayHelp() {
-	fmt.Println("Select an arg: refresh-spotify tag-files create-missing-playlist remove-unwanted")
+	fmt.Println("Select an arg: refresh-spotify tag-files create-missing-playlist remove-unwanted follow-artists")
 	os.Exit(1)
 }

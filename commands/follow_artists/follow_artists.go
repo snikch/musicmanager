@@ -75,12 +75,13 @@ func (manager *followManager) ensureFollowed(ctx context.Context, names []string
 		log.Info("No artists to follow")
 		return nil
 	}
+	log.WithField("count", len(toFollow)).Info("Artists to follow")
 	client := spotifyclient.ContextClient(ctx)
 	cursor := 0
 	for {
 		head := cursor
-		tail := (head + 50) % len(toFollow)
-		if tail == 0 {
+		tail := head + 50
+		if tail > len(toFollow) {
 			tail = len(toFollow)
 		}
 		log.WithField("count", tail-head).Info("Following artists")
@@ -90,7 +91,7 @@ func (manager *followManager) ensureFollowed(ctx context.Context, names []string
 			return fail.Trace(err)
 		}
 		// If we've hit the end, break out
-		if tail-head < 50 {
+		if tail-head < 50 || tail == len(toFollow) {
 			break
 		}
 		cursor = tail
