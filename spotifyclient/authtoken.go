@@ -51,6 +51,7 @@ func ContextWithClient(ctx context.Context) (context.Context, error) {
 		log.Debug("Creating client from existing auth token")
 
 		client := authenticator.NewClient(conf.Spotify.AuthToken)
+		client.AutoRetry = true
 		return context.WithValue(ctx, clientKey, &client), nil
 	}
 	err := authenticateUser(ctx)
