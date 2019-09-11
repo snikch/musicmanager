@@ -105,10 +105,11 @@ func retrieveGraph(ctx context.Context) (TrackGraph, error) {
 		wg.Add(1)
 		go func(ch chan<- result, wg, wg2 *sync.WaitGroup, playlist spotify.SimplePlaylist) {
 			defer wg.Done()
+			l := log.WithField("name", playlist.Name)
 			if !matcher.Match([]byte(playlist.Name)) {
+				l.Debug("Skipping playlist")
 				return
 			}
-			l := log.WithField("name", playlist.Name)
 			l.Info("Processing Playlist")
 			var fullList *spotify.PlaylistTrackPage
 			for {

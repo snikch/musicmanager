@@ -31,6 +31,7 @@ func init() {
 	scopes := []string{
 		spotify.ScopeUserReadPrivate,
 		spotify.ScopePlaylistReadPrivate,
+		spotify.ScopePlaylistReadCollaborative,
 		spotify.ScopePlaylistModifyPrivate,
 		spotify.ScopePlaylistModifyPublic,
 		spotify.ScopeUserFollowRead,
